@@ -12,6 +12,8 @@ def main():
     run_bot(
         config["discord_token"],
         openai.Backend(config["openai_token"]),
+        config.get("max_input_tokens"),
+        config.get("extra_api_settings", {}),
         frozenset(int(id) for id in config.get("ignored_users", [])),
     )
 

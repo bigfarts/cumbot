@@ -102,14 +102,22 @@ def create_prompt(make_line, preprompt, entries, postprompt, max_input_tokens):
     ]
 
 
-def run_bot(discord_api_key, backend, ignored_users=frozenset()):
+def run_bot(
+    discord_api_key,
+    backend,
+    max_input_tokens=None,
+    extra_api_settings=None,
+    ignored_users=frozenset(),
+):
+    extra_api_settings = extra_api_settings or {}
+    if max_input_tokens is None:
+        max_input_tokens = backend.MAX_INPUT_TOKENS
+
     intents = disnake.Intents.default()
     intents.messages = True
     intents.message_content = True
     intents.members = True
-    bot = disnake.ext.commands.InteractionBot(
-        intents=intents, test_guilds=[315164870997835777]
-    )
+    bot = disnake.ext.commands.InteractionBot(intents=intents)
 
     logs_lock = asyncio.Lock()
     logs = {}
@@ -253,7 +261,7 @@ def run_bot(discord_api_key, backend, ignored_users=frozenset()):
                 preprompt,
                 entries,
                 postprompt,
-                backend.MAX_INPUT_TOKENS,
+                max_input_tokens,
             )
             print(backend.pretty_format(inp))
             print(len(inp))
@@ -273,7 +281,9 @@ def run_bot(discord_api_key, backend, ignored_users=frozenset()):
 
             async def do_response():
                 async with message.channel.typing():
-                    completion = await aflatten(backend.complete(inp))
+                    completion = await aflatten(
+                        backend.complete(inp, **extra_api_settings)
+                    )
 
                 for chunk in unichunker.chunker("".join(completion), 2000):
                     await message.channel.send(chunk, reference=message)

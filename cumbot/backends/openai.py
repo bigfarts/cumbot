@@ -55,7 +55,6 @@ class Backend:
             f"""You are {nickname}.
 
 You are in a Discord channel named #{channel_name}.{f" The topic of the channel is: {topic}" if topic else ""}
-
 {STOP_SEQ}
 """
         )
