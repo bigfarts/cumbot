@@ -2,3 +2,4 @@ aiohttp
 uniseg
 disnake
 tiktoken
+toml

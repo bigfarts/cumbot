@@ -102,7 +102,7 @@ def create_prompt(make_line, preprompt, entries, postprompt, max_input_tokens):
     ]
 
 
-def run_bot(discord_api_key, backend):
+def run_bot(discord_api_key, backend, ignored_users=frozenset()):
     intents = disnake.Intents.default()
     intents.messages = True
     intents.message_content = True
@@ -119,16 +119,33 @@ def run_bot(discord_api_key, backend):
 
     @bot.slash_command(name=FORGET_COMMAND_NAME, description="Add chat log break")
     async def forget(inter):
-        await inter.response.send_message(
-            embed=disnake.Embed(
-                description="Okay, forgetting everything before here. If you want me to remember again, delete this message."
-            )
+        await inter.send(
+            embed=disnake.Embed(description="Please wait..."),
+        )
+        await inter.edit_original_response(
+            embed=disnake.Embed(description="Okay, forgetting everything from here."),
+            components=[
+                disnake.ui.Button(
+                    label="Unforget",
+                    custom_id=f"unforget:{(await inter.original_message()).id}",
+                )
+            ],
         )
         async with logs_lock:
             try:
                 del logs[inter.channel.id]
             except KeyError:
                 pass
+
+    @bot.event
+    async def on_interaction(inter):
+        if isinstance(
+            inter, disnake.interactions.message.MessageInteraction
+        ) and inter.data.custom_id.startswith("unforget:"):
+            _, _, original_interaction_id = inter.data.custom_id.partition(":")
+            await inter.channel.delete_messages(
+                [disnake.Object(int(original_interaction_id))]
+            )
 
     @bot.event
     async def on_raw_message_delete(message):
@@ -141,6 +158,9 @@ def run_bot(discord_api_key, backend):
     @bot.event
     async def on_message(message):
         if message.guild is None:
+            return
+
+        if message.author.id in ignored_users:
             return
 
         now = datetime.datetime.utcnow()
@@ -165,6 +185,7 @@ def run_bot(discord_api_key, backend):
                         and entry.interaction.type
                         == disnake.InteractionType.application_command
                         and entry.interaction.name == FORGET_COMMAND_NAME
+                        and entry.components
                     ):
                         break
                     log.appendleft(entry)
@@ -176,6 +197,7 @@ def run_bot(discord_api_key, backend):
                 and message.interaction.type
                 == disnake.InteractionType.application_command
                 and message.interaction.name == FORGET_COMMAND_NAME
+                and message.components
             ):
                 return
 
