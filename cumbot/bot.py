@@ -128,16 +128,9 @@ def run_bot(
     @bot.slash_command(name=FORGET_COMMAND_NAME, description="Add chat log break")
     async def forget(inter):
         await inter.send(
-            embed=disnake.Embed(description="Please wait..."),
-        )
-        await inter.edit_original_response(
-            embed=disnake.Embed(description="Okay, forgetting everything from here."),
-            components=[
-                disnake.ui.Button(
-                    label="Unforget",
-                    custom_id=f"unforget:{(await inter.original_message()).id}",
-                )
-            ],
+            embed=disnake.Embed(
+                description="Okay, forgetting everything from here. Delete this message if you want me to remember."
+            ),
         )
         async with logs_lock:
             try:
@@ -193,7 +186,6 @@ def run_bot(
                         and entry.interaction.type
                         == disnake.InteractionType.application_command
                         and entry.interaction.name == FORGET_COMMAND_NAME
-                        and entry.components
                     ):
                         break
                     log.appendleft(entry)
@@ -205,7 +197,6 @@ def run_bot(
                 and message.interaction.type
                 == disnake.InteractionType.application_command
                 and message.interaction.name == FORGET_COMMAND_NAME
-                and message.components
             ):
                 return
 
