@@ -1,0 +1,4 @@
+aiohttp
+uniseg
+disnake
+tiktoken
