@@ -139,16 +139,6 @@ def run_bot(
                 pass
 
     @bot.event
-    async def on_interaction(inter):
-        if isinstance(
-            inter, disnake.interactions.message.MessageInteraction
-        ) and inter.data.custom_id.startswith("unforget:"):
-            _, _, original_interaction_id = inter.data.custom_id.partition(":")
-            await inter.channel.delete_messages(
-                [disnake.Object(int(original_interaction_id))]
-            )
-
-    @bot.event
     async def on_raw_message_delete(message):
         async with logs_lock:
             try:
@@ -270,17 +260,19 @@ def run_bot(
             # print(summary)
             # raise Exception
 
-            async def do_response():
+            try:
+                completion = []
                 async with message.channel.typing():
-                    completion = await aflatten(
-                        backend.complete(inp, **extra_api_settings)
-                    )
+                    completion_gen = aiter(backend.complete(inp, **extra_api_settings))
+                    while True:
+                        try:
+                            token = await asyncio.wait_for(anext(completion_gen), 5.0)
+                        except StopAsyncIteration:
+                            break
+                        completion.append(token)
 
                 for chunk in unichunker.chunker("".join(completion), 2000):
                     await message.channel.send(chunk, reference=message)
-
-            try:
-                await asyncio.wait_for(do_response(), 30.0)
             except Exception as e:
                 await message.channel.send(
                     embed=disnake.Embed(
