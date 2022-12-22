@@ -1,7 +1,7 @@
 import argparse
 
-from .bot import run_bot
 from .backends import openai
+from .bot import run_bot
 
 
 def main():

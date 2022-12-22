@@ -1,7 +1,7 @@
-import aiohttp
 import json
-import tiktoken
 
+import aiohttp
+import tiktoken
 
 STOP_SEQ = "###"
 

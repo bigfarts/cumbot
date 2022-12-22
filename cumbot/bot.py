@@ -1,9 +1,11 @@
 import asyncio
+import collections
 import datetime
+import re
+
 import disnake
 import disnake.ext.commands
-import collections
-import re
+
 from . import unichunker
 
 LogEntry = collections.namedtuple(
