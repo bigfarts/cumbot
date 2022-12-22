@@ -250,15 +250,8 @@ def run_bot(discord_api_key, backend):
             # raise Exception
 
             async def do_response():
-                completion_gen = backend.complete(inp)
-
-                try:
-                    fst = await anext(completion_gen)
-                except StopAsyncIteration:
-                    return
-
                 async with message.channel.typing():
-                    completion = [fst, *await aflatten(completion_gen)]
+                    completion = await aflatten(backend.complete(inp))
 
                 for chunk in unichunker.chunker("".join(completion), 2000):
                     await message.channel.send(chunk, reference=message)
