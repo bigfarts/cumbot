@@ -51,7 +51,7 @@ class Backend:
 
                     yield json.loads(payload)
 
-    async def complete(self, prompt, **kwargs):
+    def complete(self, prompt, **kwargs):
         return (
             part["choices"][0]["text"] async for part in self.request(prompt, **kwargs)
         )
