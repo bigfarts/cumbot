@@ -107,7 +107,6 @@ def run_bot(
     backend,
     max_input_tokens=None,
     extra_api_settings=None,
-    ignored_users=frozenset(),
 ):
     extra_api_settings = extra_api_settings or {}
     if max_input_tokens is None:
@@ -155,9 +154,6 @@ def run_bot(
     @bot.event
     async def on_message(message):
         if message.guild is None:
-            return
-
-        if message.author.id in ignored_users:
             return
 
         now = datetime.datetime.utcnow()
