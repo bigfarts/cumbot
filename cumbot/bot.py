@@ -307,6 +307,6 @@ def run_bot(
 
             rest = chunker.flush()
             if rest:
-                await message.channel.send(chunk, reference=message)
+                await message.channel.send(rest, reference=message)
 
     bot.run(discord_api_key)
