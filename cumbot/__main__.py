@@ -14,6 +14,7 @@ def main():
         openai.Backend(config["openai_token"]),
         config.get("max_input_tokens"),
         config.get("extra_api_settings", {}),
+        config.get("text_replacements", {}),
     )
 
 

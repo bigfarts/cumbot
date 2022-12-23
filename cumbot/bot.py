@@ -16,6 +16,19 @@ LogEntry = collections.namedtuple(
 MAX_LOG_ENTRIES = 200
 
 
+def replace_text(replacements, s):
+    if not replacements:
+        return s
+
+    return re.sub(
+        "|".join(re.escape(k) for k in replacements),
+        lambda v: replacements[v.group(0).lower()],
+        s,
+        0,
+        re.IGNORECASE,
+    )
+
+
 def resolve_display_name(guild, id):
     member = guild.get_member(id)
     if member is None:
@@ -53,7 +66,9 @@ async def aflatten(gen):
 FORGET_COMMAND_NAME = "forget"
 
 
-def create_prompt(make_line, preprompt, entries, postprompt, max_input_tokens):
+def create_prompt(
+    make_line, preprompt, entries, postprompt, max_input_tokens, text_replacements
+):
     body = []
 
     for entry in entries:
@@ -71,7 +86,10 @@ def create_prompt(make_line, preprompt, entries, postprompt, max_input_tokens):
                     reference.id,
                     resolve_display_name(reference.guild, reference.author.id),
                     reference.created_at,
-                    cleanup_message(reference.content, reference.guild),
+                    replace_text(
+                        text_replacements,
+                        cleanup_message(reference.content, reference.guild),
+                    ),
                 )
 
         line_tokens = make_line(
@@ -79,7 +97,9 @@ def create_prompt(make_line, preprompt, entries, postprompt, max_input_tokens):
                 entry.id,
                 resolve_display_name(entry.guild, entry.author.id),
                 entry.created_at,
-                cleanup_message(entry.content, entry.guild),
+                replace_text(
+                    text_replacements, cleanup_message(entry.content, entry.guild)
+                ),
             ),
             reference_log_entry,
         )
@@ -107,7 +127,11 @@ def run_bot(
     backend,
     max_input_tokens=None,
     extra_api_settings=None,
+    text_replacements=None,
 ):
+    text_replacements = text_replacements or {}
+    text_replacements = {k.lower(): v for k, v in text_replacements.items()}
+
     extra_api_settings = extra_api_settings or {}
     if max_input_tokens is None:
         max_input_tokens = backend.MAX_INPUT_TOKENS
@@ -213,6 +237,7 @@ def run_bot(
                 ),
                 reference=message,
             )
+            await message.channel.trigger_typing()
             return
 
         async with request_lock:
@@ -234,7 +259,10 @@ def run_bot(
                         reference.id,
                         resolve_display_name(reference.guild, reference.author.id),
                         reference.created_at,
-                        cleanup_message(reference.content, reference.guild),
+                        replace_text(
+                            text_replacements,
+                            cleanup_message(reference.content, reference.guild),
+                        ),
                     )
 
             postprompt = backend.make_postprompt(nick, now, reference_log_entry)
@@ -245,36 +273,28 @@ def run_bot(
                 entries,
                 postprompt,
                 max_input_tokens,
+                text_replacements,
             )
             print(backend.pretty_format(inp))
             print(len(inp))
             print("---")
 
-            # summary_inp = create_prompt(
-            #     backend,
-            #     backend.make_summary_preprompt(nick, now),
-            #     entries,
-            #     backend.make_summary_postprompt(),
-            # )
-            # summary = "".join(
-            #     await asyncio.wait_for(backend.complete(summary_inp), 30.0)
-            # )
-            # print(summary)
-            # raise Exception
+            completion = []
+            completion_gen = aiter(
+                backend.complete(
+                    inp,
+                    **extra_api_settings,
+                )
+            )
 
             try:
-                completion = []
                 async with message.channel.typing():
-                    completion_gen = aiter(backend.complete(inp, **extra_api_settings))
                     while True:
                         try:
                             token = await asyncio.wait_for(anext(completion_gen), 5.0)
                         except StopAsyncIteration:
                             break
                         completion.append(token)
-
-                for chunk in unichunker.chunker("".join(completion), 2000):
-                    await message.channel.send(chunk, reference=message)
             except Exception as e:
                 await message.channel.send(
                     embed=disnake.Embed(
@@ -284,5 +304,8 @@ def run_bot(
                     )
                 )
                 raise
+
+            for chunk in unichunker.chunker("".join(completion), 2000):
+                await message.channel.send(chunk, reference=message)
 
     bot.run(discord_api_key)
