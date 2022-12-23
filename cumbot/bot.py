@@ -285,7 +285,7 @@ def run_bot(
                 )
             )
 
-            completion = []
+            chunker = unichunker.IncrementalChunker(2000)
             try:
                 async with message.channel.typing():
                     while True:
@@ -293,7 +293,8 @@ def run_bot(
                             token = await asyncio.wait_for(anext(completion_gen), 5.0)
                         except StopAsyncIteration:
                             break
-                        completion.append(token)
+                        for chunk in chunker.write(token):
+                            await message.channel.send(chunk, reference=message)
             except Exception as e:
                 await message.channel.send(
                     embed=disnake.Embed(
@@ -304,7 +305,8 @@ def run_bot(
                 )
                 raise
 
-            for chunk in unichunker.chunker("".join(completion), 2000):
+            rest = chunker.flush()
+            if rest:
                 await message.channel.send(chunk, reference=message)
 
     bot.run(discord_api_key)
