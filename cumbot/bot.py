@@ -279,14 +279,15 @@ def run_bot(
             print(len(inp))
             print("---")
 
-            completion = []
+            settings = {**extra_api_settings}
             completion_gen = aiter(
                 backend.complete(
                     inp,
-                    **extra_api_settings,
+                    **settings,
                 )
             )
 
+            completion = []
             try:
                 async with message.channel.typing():
                     while True:

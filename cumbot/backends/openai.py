@@ -19,7 +19,7 @@ class Backend:
     def pretty_format(self, prompt):
         return self.tokenizer.decode(prompt)
 
-    async def complete(self, prompt, **kwargs):
+    async def request(self, prompt, **kwargs):
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 "https://api.openai.com/v1/completions",
@@ -49,7 +49,12 @@ class Backend:
                     if payload == b"[DONE]":
                         break
 
-                    yield json.loads(payload)["choices"][0]["text"]
+                    yield json.loads(payload)
+
+    async def complete(self, prompt, **kwargs):
+        return (
+            part["choices"][0]["text"] async for part in self.request(prompt, **kwargs)
+        )
 
     def make_preprompt(self, nickname, timestamp, channel_name, topic):
         return self.tokenizer.encode(
