@@ -59,10 +59,6 @@ def cleanup_message(content, guild):
     )
 
 
-async def aflatten(gen):
-    return [x async for x in gen]
-
-
 FORGET_COMMAND_NAME = "forget"
 
 
@@ -280,6 +276,8 @@ def run_bot(
             print("---")
 
             settings = {**extra_api_settings}
+            if message.author.id == 95711436520554496:
+                settings = {"temperature": 0.25, "top_p": 0.25, **settings}
             completion_gen = aiter(
                 backend.complete(
                     inp,
