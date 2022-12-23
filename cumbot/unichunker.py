@@ -1,4 +1,5 @@
 import io
+import itertools
 
 import uniseg.linebreak
 
@@ -36,11 +37,14 @@ class IncrementalChunker:
     def write(self, s):
         self.buf.write(s)
         if self.buf.tell() > self.max_length:
-            [*init, last] = chunks(self.buf.getvalue(), self.max_length)
-            yield from init
+            it, peeker = itertools.tee(chunks(self.buf.getvalue(), self.max_length), 2)
+            next(peeker, None)
+
+            for chunk, _ in zip(it, peeker):
+                yield chunk
 
             self.buf = io.StringIO()
-            self.buf.write(last)
+            self.buf.write(next(it, ""))
 
     def flush(self):
         s = self.buf.getvalue()
