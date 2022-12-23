@@ -127,16 +127,22 @@ def run_bot(
 
     @bot.slash_command(name=FORGET_COMMAND_NAME, description="Add chat log break")
     async def forget(inter):
-        await inter.send(
-            embed=disnake.Embed(
-                description="Okay, forgetting everything from here. Delete this message if you want me to remember."
-            ),
-        )
-        async with logs_lock:
-            try:
-                del logs[inter.channel.id]
-            except KeyError:
-                pass
+        async with requests_locks_lock:
+            if inter.channel.id not in requests_locks:
+                requests_locks[inter.channel.id] = asyncio.Lock()
+            request_lock = requests_locks[inter.channel.id]
+
+        async with request_lock:
+            await inter.send(
+                embed=disnake.Embed(
+                    description="Okay, forgetting everything from here. Delete this message if you want me to remember."
+                ),
+            )
+            async with logs_lock:
+                try:
+                    del logs[inter.channel.id]
+                except KeyError:
+                    pass
 
     @bot.event
     async def on_raw_message_delete(message):
