@@ -15,41 +15,41 @@ class Backend:
         self.api_key = api_key
         self.tokenizer = tiktoken.get_encoding("gpt2")
         self.stop_seq = self.tokenizer.encode(STOP_SEQ)
+        self.session = aiohttp.ClientSession()
 
     def pretty_format(self, prompt):
         return self.tokenizer.decode(prompt)
 
     async def request(self, prompt, **kwargs):
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.openai.com/v1/completions",
-                json={
-                    "model": "text-davinci-003",
-                    "temperature": 1.0,
-                    "stream": True,
-                    "prompt": self.tokenizer.decode(prompt),
-                    "max_tokens": 4000 - self.MAX_INPUT_TOKENS,
-                    "stop": [self.tokenizer.decode(self.stop_seq)],
-                    **kwargs,
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.api_key}",
-                },
-            ) as resp:
-                resp.raise_for_status()
-                async for line in resp.content:
-                    line = line.strip()
-                    if not line:
-                        continue
+        async with self.session.post(
+            "https://api.openai.com/v1/completions",
+            json={
+                "model": "text-davinci-003",
+                "temperature": 1.0,
+                "stream": True,
+                "prompt": self.tokenizer.decode(prompt),
+                "max_tokens": 4000 - self.MAX_INPUT_TOKENS,
+                "stop": [self.tokenizer.decode(self.stop_seq)],
+                **kwargs,
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.content:
+                line = line.strip()
+                if not line:
+                    continue
 
-                    if not line.startswith(b"data: "):
-                        raise ValueError(line)
-                    payload = line[6:]
-                    if payload == b"[DONE]":
-                        break
+                if not line.startswith(b"data: "):
+                    raise ValueError(line)
+                payload = line[6:]
+                if payload == b"[DONE]":
+                    break
 
-                    yield json.loads(payload)
+                yield json.loads(payload)
 
     def complete(self, prompt, **kwargs):
         return (
