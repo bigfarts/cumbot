@@ -7,6 +7,14 @@ import tiktoken
 STOP_SEQ = "###"
 
 
+class ServerError(Exception):
+   def __init__(self, payload):
+       self.payload = payload
+
+   def __str__(self):
+       return self.payload["message"]
+
+
 class Backend:
 
     MAX_INPUT_TOKENS = 2000
@@ -49,7 +57,10 @@ class Backend:
                 if payload == b"[DONE]":
                     break
 
-                yield json.loads(payload)
+                resp = json.loads(payload)
+                if "error" in resp:
+                    raise ServerError(resp["error"])
+                yield resp
 
     def complete(self, prompt, **kwargs):
         return (

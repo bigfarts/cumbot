@@ -289,7 +289,7 @@ def run_bot(
             try:
                 async with message.channel.typing():
                     while True:
-                        token = await asyncio.wait_for(anext(completion_gen, None), 5.0)
+                        token = await asyncio.wait_for(anext(completion_gen, None), 30.0)
                         if token is None:
                             break
 
