@@ -289,9 +289,8 @@ def run_bot(
             try:
                 async with message.channel.typing():
                     while True:
-                        try:
-                            token = await asyncio.wait_for(anext(completion_gen), 5.0)
-                        except StopAsyncIteration:
+                        token = await asyncio.wait_for(anext(completion_gen, None), 5.0)
+                        if token is None:
                             break
 
                         for chunk in chunker.write(token):
