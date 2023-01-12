@@ -286,27 +286,28 @@ def run_bot(
             )
 
             chunker = unichunker.IncrementalChunker(2000)
-            async with message.channel.typing():
-                while True:
-                    try:
-                        token = await asyncio.wait_for(anext(completion_gen), 5.0)
-                    except StopAsyncIteration:
-                        break
-                    except Exception as e:
-                        await message.channel.send(
-                            embed=disnake.Embed(
-                                color=disnake.Color.red(),
-                                title="Error",
-                                description=f"{e.__class__.__name__}: {e}",
-                            )
-                        )
-                        raise
+            try:
+                async with message.channel.typing():
+                    while True:
+                        try:
+                            token = await asyncio.wait_for(anext(completion_gen), 5.0)
+                        except StopAsyncIteration:
+                            break
 
-                    for chunk in chunker.write(token):
-                        await message.channel.send(chunk, reference=message)
+                        for chunk in chunker.write(token):
+                            await message.channel.send(chunk, reference=message)
 
-            rest = chunker.flush()
-            if rest:
-                await message.channel.send(rest, reference=message)
+                rest = chunker.flush()
+                if rest:
+                    await message.channel.send(rest, reference=message)
+            except Exception as e:
+                await message.channel.send(
+                    embed=disnake.Embed(
+                        color=disnake.Color.red(),
+                        title="Error",
+                        description=f"{e.__class__.__name__}: {e}",
+                    )
+                )
+                raise
 
     bot.run(discord_api_key)
